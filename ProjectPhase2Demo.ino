@@ -8,7 +8,7 @@ typedef enum state {
   TRIGGERED
 } state;
 
-typdef enum event {
+typedef enum event {
   IDLE, // Do nothing
   MOTION_DETECTED,
   SINGLE_BUTTON_PRESS,
