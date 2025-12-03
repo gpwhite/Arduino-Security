@@ -24,11 +24,13 @@ event current_event;
 int TAP_SENSOR = 2;
 int RED_LED = 3;
 int BLUE_LED = 4;
-int GREEN_LED = 5;
-int BUTTON = 6;
+int UPDATE_BUTTON = 5;
+int ARM_BUTTON = 6;
 int DOOR_SENSOR = 7;
 int SPEAKER_OUT = 8;
 int MOTION_SENSOR=9;
+
+
 
 bool red_led_state = false;
 bool blue_led_state = false;
@@ -56,6 +58,8 @@ void setup() {
   pinMode(GREEN_LED, OUTPUT);
   pinMode(SPEAKER_OUT,OUTPUT);
   pinMode(MOTION_SENSOR,INPUT);
+  pinMode(ARM_BUTTON,INPUT_PULLUP);
+  pinMode(PASS_BUTTON,INPUT_PULLUP)
 
   Serial.begin(9600);
 }
@@ -141,7 +145,13 @@ void handleEvents() {}
 void handleStates() {
     switch (current_state) {
     case DISARMED:
-      // Function to digitalWrite(GREEN_LED, HIGH)
+      // no lights will be enabled during disarm
+      if(digitalRead(MOTION_SENSOR)){ //MOTION detector active; will advance to armed state if motion detected
+        current_event=MOTION_DETECTED;
+      }
+      if(digitalRead(ARM_BUTTON, HIGH)){
+        
+      }
       break;
 
     case ARMED:
