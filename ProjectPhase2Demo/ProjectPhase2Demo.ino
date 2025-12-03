@@ -179,6 +179,10 @@ void loop() {
 // Will need to implement synchronization measures to protect shared value current_event at this state
 void handleEvents() {}
 
+const unsigned long FIVE_SECONDS = 5000;
+unsigned long passwordTimer = 0;
+bool timerActive = false;
+
 void handleStates() {
     switch (current_state) {
     case DISARMED:
