@@ -250,7 +250,7 @@ void handleStates() {
         enteredPassword = listToPWData(size);
         bool verify = checkPassword();
         if (verify) {
-          current_event = UPDATING_PASSWORD;
+          current_event = CORRECT_PASSWORD;
         }
         else {
           current_event = INCORRECT_PASSWORD;
