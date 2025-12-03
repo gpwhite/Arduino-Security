@@ -11,8 +11,8 @@ typedef enum state {
 typedef enum event {
   IDLE, // Do nothing
   MOTION_DETECTED,
-  SINGLE_BUTTON_PRESS,
-  DOUBLE_BUTTON_PRESS,
+  ARM_BUTTON_PRESSED,
+  UPDATE_BUTTON_PRESSED,
   INCORRECT_PASSWORD,
   CORRECT_PASSWORD,
   DOOR_OPENED
@@ -21,14 +21,19 @@ typedef enum event {
 state current_state;
 event current_event;
 
+unsigned long lastPassTime=0;
+unsigned long lastArmTime=0;
+
+
 int TAP_SENSOR = 2;
 int RED_LED = 3;
 int BLUE_LED = 4;
-int UPDATE_BUTTON = 5;
+int PASS_BUTTON = 5;
 int ARM_BUTTON = 6;
 int DOOR_SENSOR = 7;
 int SPEAKER_OUT = 8;
 int MOTION_SENSOR=9;
+
 
 
 
@@ -44,6 +49,10 @@ int prevButtonState = HIGH;
 int buttonDebouncedState = HIGH;
 unsigned long buttonDebounceTime = 0;  
 const unsigned long buttonDebounceDelay = 20;
+int lastArmState=LOW;
+int lastPassState=LOW;
+int armState;
+int passState;
 
 void setup() {
   // Initial State
@@ -51,15 +60,14 @@ void setup() {
   // Initial Event = Idle, nothings happened yet
   current_event = IDLE;
   pinMode(TAP_SENSOR, INPUT_PULLUP);
-  pinMode(BUTTON, INPUT_PULLUP);
+  pinMode(ARM_BUTTON, INPUT_PULLUP);
   pinMode(DOOR_SENSOR, INPUT_PULLUP);
   pinMode(RED_LED, OUTPUT);
   pinMode(BLUE_LED, OUTPUT);
-  pinMode(GREEN_LED, OUTPUT);
   pinMode(SPEAKER_OUT,OUTPUT);
   pinMode(MOTION_SENSOR,INPUT);
   pinMode(ARM_BUTTON,INPUT_PULLUP);
-  pinMode(PASS_BUTTON,INPUT_PULLUP)
+  pinMode(PASS_BUTTON,INPUT_PULLUP);
 
   Serial.begin(9600);
 }
@@ -68,18 +76,21 @@ void loop() {
   // Update current_event first so current_state can update accordingly
   handleEvents();
   testTapSensor();
-  testButton();
+  //testButton();
   testDoorSensor();
   
   // FSM implemented with switch cases and nested if statements, shows control flow of to-be-implemented features
   // If current_event is not relevant to current_state it is ignored
   switch (current_state) {
     case DISARMED:
-      if (current_event == SINGLE_BUTTON_PRESS) {
+      if (current_event == ARM_BUTTON_PRESSED) {
         current_state = ARMED;
       }
       if(current_event == MOTION_DETECTED){
         current_state = ARMED;
+      }
+      else if (current_event == ARM_BUTTON_PRESSED) {
+        current_state = CHANGING_PASSWORD;
       }
       break;
 
@@ -93,11 +104,8 @@ void loop() {
       break;
 
     case WARNING:
-      if (current_event == SINGLE_BUTTON_PRESS) {
+      if (current_event == ARM_BUTTON_PRESSED) {
         current_state = ENTERING_PASSWORD;
-      }
-      else if (current_event == DOUBLE_BUTTON_PRESS) {
-        current_state = CHANGING_PASSWORD;
       }
       else if (current_event == DOOR_OPENED) {
         current_state = TRIGGERED;
@@ -116,7 +124,7 @@ void loop() {
       }
       break;
 
-    case CHANGING_PASSWORD:
+    /*case CHANGING_PASSWORD:
       if (current_event == DOOR_OPENED) {
         current_state = TRIGGERED;
       }
@@ -133,11 +141,11 @@ void loop() {
         current_state = DISARMED;
       }
       break;
-  }
+  */
   // Will execute function associated with current_state after it has updated
   handleStates();
 }
-
+}
 // Will use the input data received from each sensor to properly determine the correct state
 // Will need to implement synchronization measures to protect shared value current_event at this state
 void handleEvents() {}
@@ -149,13 +157,13 @@ void handleStates() {
       if(digitalRead(MOTION_SENSOR)){ //MOTION detector active; will advance to armed state if motion detected
         current_event=MOTION_DETECTED;
       }
-      if(digitalRead(ARM_BUTTON, HIGH)){
-        
+      if(dbArm()==1){//if arm button is pressed
+      current_event=ARM_BUTTON_PRESSED;
       }
       break;
 
     case ARMED:
-      // Function to digitalWrite(RED_LED, HIGH)
+      digitalWrite(RED_LED, HIGH);
       if(digitalRead(MOTION_SENSOR)){
         current_event=MOTION_DETECTED;
       }
@@ -165,7 +173,13 @@ void handleStates() {
       break;
 
     case WARNING:
-      // Function to Blink RED_LED
+      // Function to turn on red and blue 
+      digitalWrite(RED_LED,HIGH);
+      digitalWrite(BLUE_LED, HIGH);
+      if(digitalRead(DOOR_SENSOR)==HIGH){
+        current_event=DOOR_OPENED;
+      }
+
       // Function to detect door opening
       break;
 
@@ -182,7 +196,10 @@ void handleStates() {
     case UPDATING_PASSWORD:
     // Function to enter a password of tap inputs
       break;
-  }
+  
+    case TRIGGERED:
+    break;
+}
 }
 
 
@@ -199,7 +216,7 @@ void testTapSensor() {
 }
 
 // Source: Button Debounce Solution - CSE 321 UBLearns
-void testButton() {
+/*void testButton() {
   int buttonState = digitalRead(BUTTON);
 
   if (buttonState != prevButtonState) {
@@ -217,13 +234,44 @@ void testButton() {
   }
   digitalWrite(BLUE_LED, blue_led_state);
   prevButtonState = buttonState;
-}
+}*/
 
 void testDoorSensor() {
   int doorState = digitalRead(DOOR_SENSOR);
-  digitalWrite(GREEN_LED, doorState);
+  //digitalWrite(GREEN_LED, doorState);
 }
 
+//dbArm() - debeounces input to ARM_BUTTON and returns 1 or 0
+int dbArm(){
+  int reading = digitalRead(ARM_BUTTON);
+  if(reading!=lastArmState){
+    lastArmTime=millis();
+  }
+  if((millis()-lastArmTime)>buttonDebounceDelay){
+    if(reading!= armState){
+      armState=reading;    
+    if(armState==LOW){
+      lastArmTime=millis();
+      return 1;
+    }}
+    return 0;
+  }
+}
+int dbPass(){ //same as dbArm just for the PASS button
+  int reading = digitalRead(PASS_BUTTON);
+  if(reading!=lastPassState){
+    lastPassState=millis();
+  }
+  if((millis()-lastPassTime)>buttonDebounceDelay){
+    if(reading!= passState){
+      passState=reading;    
+    if(passState==LOW){
+      lastPassTime=millis();
+      return 1;
+    }}
+    return 0;
+  }
+}
 void testSpeaker(){
   digitalWrite(SPEAKER_OUT,HIGH);
   delay(300);
