@@ -103,10 +103,9 @@ void setup() {
 
 void loop() {
   // Update current_event first so current_state can update accordingly
-  handleEvents();
-  testTapSensor();
+  //testTapSensor();
   //testButton();
-  testDoorSensor();
+  //testDoorSensor();
   
   // FSM implemented with switch cases and nested if statements, shows control flow of to-be-implemented features
   // If current_event is not relevant to current_state it is ignored
@@ -172,8 +171,8 @@ void loop() {
       break;
   */
   // Will execute function associated with current_state after it has updated
+  }
   handleStates();
-}
 }
 // Will use the input data received from each sensor to properly determine the correct state
 // Will need to implement synchronization measures to protect shared value current_event at this state
