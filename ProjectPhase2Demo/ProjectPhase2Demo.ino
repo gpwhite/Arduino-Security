@@ -218,7 +218,7 @@ void handleStates() {
     case ENTERING_PASSWORD:
       // Detecing door opening
       if (digitalRead(DOOR_SENSOR) == HIGH) {
-        current_event = TRIGGERED;
+        current_event = DOOR_OPENED;
       }
     // Function to match tap inputs to a preset password
       enterPassword();
@@ -228,10 +228,10 @@ void handleStates() {
         enteredPassword = listToPWData(size);
         bool verify = checkPassword();
         if (verify) {
-          current_event = DISARMED;
+          current_event = CORRECT_PASSWORD;
         }
         else {
-          current_event = TRIGGERED;
+          current_event = INCORRECT_PASSWORD;
         }
         resetList();
         free(enteredPassword);
@@ -241,7 +241,7 @@ void handleStates() {
 
     case CHANGING_PASSWORD:
       if (digitalRead(DOOR_SENSOR) == HIGH) {
-        current_event = TRIGGERED;
+        current_event = DOOR_OPENED;
       }
       enterPassword();
       if ((millis() - passwordTimer) > FIVE_SECONDS) {
@@ -253,7 +253,7 @@ void handleStates() {
           current_event = UPDATING_PASSWORD;
         }
         else {
-          current_event = TRIGGERED;
+          current_event = INCORRECT_PASSWORD;
         }
         resetList();
         free(enteredPassword);
@@ -271,6 +271,8 @@ void handleStates() {
         listSize = size;
         resetList();
         passwordTimer = 0;
+
+        current_event = IDLE;
       }
       break;
   
