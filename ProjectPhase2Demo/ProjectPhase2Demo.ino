@@ -28,6 +28,7 @@ int GREEN_LED = 5;
 int BUTTON = 6;
 int DOOR_SENSOR = 7;
 int SPEAKER_OUT = 8;
+int MOTION_SENSOR=9;
 
 bool red_led_state = false;
 bool blue_led_state = false;
@@ -54,6 +55,7 @@ void setup() {
   pinMode(BLUE_LED, OUTPUT);
   pinMode(GREEN_LED, OUTPUT);
   pinMode(SPEAKER_OUT,OUTPUT);
+  pinMode(MOTION_SENSOR,INPUT);
 
   Serial.begin(9600);
 }
@@ -70,6 +72,9 @@ void loop() {
   switch (current_state) {
     case DISARMED:
       if (current_event == SINGLE_BUTTON_PRESS) {
+        current_state = ARMED;
+      }
+      if(current_event == MOTION_DETECTED){
         current_state = ARMED;
       }
       break;
@@ -141,8 +146,12 @@ void handleStates() {
 
     case ARMED:
       // Function to digitalWrite(RED_LED, HIGH)
-      // Function for motion detection
-      // Function to detect door opening
+      if(digitalRead(MOTION_SENSOR)){
+        current_event=MOTION_DETECTED;
+      }
+      if(digitalRead(DOOR_SENSOR)){
+        current_event=DOOR_OPENED;
+      }
       break;
 
     case WARNING:
