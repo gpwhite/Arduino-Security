@@ -21,6 +21,23 @@ typedef enum event {
 state current_state;
 event current_event;
 
+typedef struct inputListNode {
+  unsigned long time;
+  inputListNode *next;
+} inputListNode;
+
+typedef struct passwordData {
+  size_t size;
+  unsigned long times[];
+} passwordData;
+
+// Password structs
+inputListNode *head;
+inputListNode *tail;
+passwordData *correctPassword;
+passwordData *enteredPassword;
+size_t listSize = 1;
+
 unsigned long lastPassTime=0;
 unsigned long lastArmTime=0;
 
@@ -35,11 +52,8 @@ int SPEAKER_OUT = 8;
 int MOTION_SENSOR=9;
 
 
-
-
 bool red_led_state = false;
 bool blue_led_state = false;
-bool green_led_state = false;
 
 // Debouncing Variables
 unsigned long tapDebounceTime = 0;  
@@ -69,6 +83,21 @@ void setup() {
   pinMode(ARM_BUTTON,INPUT_PULLUP);
   pinMode(PASS_BUTTON,INPUT_PULLUP);
 
+  head = malloc(sizeof(inputListNode));
+  if (head == NULL) {
+    Serial.println("Linked List Allocation failed");
+  }
+  head->time = 0;
+  head->next = NULL;
+  tail = head;
+
+  correctPassword = malloc(sizeof(passwordData) + sizeof(unsigned long) * listSize);
+  if (correctPassword == NULL) {
+    Serial.println("Password Data Allocation failed");
+  }
+  correctPassword->size = listSize;
+  correctPassword->times[0] = 0; // MAKE SURE NOT TO TOUCH SENSOR WHEN SETTING INITIAL PASSWORD, OR ELSE REBOOT IS NECESSARY
+
   Serial.begin(9600);
 }
 
@@ -89,7 +118,7 @@ void loop() {
       if(current_event == MOTION_DETECTED){
         current_state = ARMED;
       }
-      else if (current_event == ARM_BUTTON_PRESSED) {
+      else if (current_event == UPDATE_BUTTON_PRESSED) {
         current_state = CHANGING_PASSWORD;
       }
       break;
@@ -184,22 +213,141 @@ void handleStates() {
       break;
 
     case ENTERING_PASSWORD:
-    // Function to detect door opening
+      // Detecing door opening
+      if (digitalRead(DOOR_SENSOR) == HIGH) {
+        current_event = TRIGGERED;
+      }
     // Function to match tap inputs to a preset password
+      enterPassword();
+      if ((millis() - passwordTimer) > FIVE_SECONDS) {
+        size_t size = getSize();
+        timerActive = false;
+        enteredPassword = listToPWData(size);
+        bool verify = checkPassword();
+        if (verify) {
+          current_event = DISARMED;
+        }
+        else {
+          current_event = TRIGGERED;
+        }
+        resetList();
+        free(enteredPassword);
+        passwordTimer = 0;
+      }
       break;
 
     case CHANGING_PASSWORD:
-    // Function to detect door opening
-    // Function to match tap inputs to a preset password
+      if (digitalRead(DOOR_SENSOR) == HIGH) {
+        current_event = TRIGGERED;
+      }
+      enterPassword();
+      if ((millis() - passwordTimer) > FIVE_SECONDS) {
+        size_t size = getSize();
+        timerActive = false;
+        enteredPassword = listToPWData(size);
+        bool verify = checkPassword();
+        if (verify) {
+          current_event = UPDATING_PASSWORD;
+        }
+        else {
+          current_event = TRIGGERED;
+        }
+        resetList();
+        free(enteredPassword);
+        passwordTimer = 0;
+      }
       break;
 
     case UPDATING_PASSWORD:
     // Function to enter a password of tap inputs
+      enterPassword();
+      if ((millis() - passwordTimer) > FIVE_SECONDS) {
+        size_t size = getSize();
+        timerActive = false;
+        correctPassword = listToPWData(size);
+        listSize = size;
+        resetList();
+        passwordTimer = 0;
+      }
       break;
   
     case TRIGGERED:
-    break;
+      break;
+  }
 }
+
+void enterPassword() {
+  int tapState = digitalRead(TAP_SENSOR);
+  unsigned long t = millis();
+  // Only Update LED when TAP_SENSOR goes from high to low
+  if (tapState == LOW) {
+    if ((t - tapDebounceTime) > tapDelay) {
+      tapDebounceTime = t;
+      appendNode(t);
+    }
+  }
+}
+
+bool checkPassword() {
+  listSize = getSize();
+  if (correctPassword->size != enteredPassword->size) {
+    return false;
+  }
+  for (int i = 0; i < listSize; i++) {
+    // 150ms tolerance , adjust until working properly
+    if (!((correctPassword->times[i] - 75) < enteredPassword->times[i] && (correctPassword->times[i] + 75) > enteredPassword[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// LINKED LIST FUNCTIONS
+void appendNode(unsigned long t) {
+  if (head->time == 0) {
+    head->time = t;
+  }
+  else {
+    inputListNode *newNode = malloc(sizeof(inputListNode));
+    newNode->time = t;
+    newNode->next = NULL;
+    tail->next = newNode;
+    tail = newNode;
+  }  
+}
+
+void resetList() {
+  while (head != NULL) {
+    inputListNode *temp = head->next;
+    free(head);
+    head = temp;
+  }
+  listSize = 0;
+}
+
+size_t getSize() {
+  size_t out = 0;
+  inputListNode *temp = head;
+  while (temp != NULL) {
+    out++;
+    temp = temp->next;
+  }
+  return out;
+}
+
+// Remember to site geeks for geeks Flexible Array Member
+passwordData* listToPWData(size_t listSize) {
+  passwordData *data = malloc(sizeof(passwordData) + sizeof(unsigned long) * listSize);
+  data->size = listSize;
+  unsigned long firstTap = head->time;
+  inputListNode *temp = head;
+
+  for (int i = 0; i < listSize; i++) {
+    data->times[i] = temp->time - firstTap;
+    temp = temp->next;
+  }
+
+  return data;
 }
 
 
