@@ -38,8 +38,7 @@ passwordData *correctPassword;
 passwordData *enteredPassword;
 size_t listSize = 1;
 
-unsigned long lastPassTime=0;
-unsigned long lastArmTime=0;
+
 
 
 int TAP_SENSOR = 2;
@@ -59,14 +58,13 @@ bool blue_led_state = false;
 unsigned long tapDebounceTime = 0;  
 const unsigned long tapDebounceDelay = 200; // Tap Sensor is very sensitive, so it requires a high debounce delay for accurate inputs. It could also be my implementation thats the problem, look into fixing to allow for faster tapping passwords
 
-int prevButtonState = HIGH;
-int buttonDebouncedState = HIGH;
-unsigned long buttonDebounceTime = 0;  
-const unsigned long buttonDebounceDelay = 1;
-int lastArmState=LOW;
-int lastPassState=LOW;
-int armState;
-int passState;
+int passlastButtonState = HIGH;      // Previous reading from the button
+int passdebouncedButtonState = HIGH; 
+unsigned long passlastDebounceTime = 0;  // Last time the button state changed
+const unsigned long debounceDelay = 20; // Debounce time in milliseconds
+int armlastButtonState = HIGH;      // Previous reading from the button
+int armdebouncedButtonState = HIGH; 
+unsigned long armlastDebounceTime = 0; 
 
 void setup() {
   // Initial State
@@ -98,17 +96,18 @@ void setup() {
   correctPassword->size = listSize;
   correctPassword->times[0] = 0; // MAKE SURE NOT TO TOUCH SENSOR WHEN SETTING INITIAL PASSWORD, OR ELSE REBOOT IS NECESSARY
 
-  Serial.begin(9600);
+  Serial.begin(115200);
 }
 
 void loop() {
   
-  if(dbPass()){
+  if(dbPass()==1){
     Serial.println("Password Button pressed");
   }
-  if(dbArm()){
-    Serial.println("Arm Button pressed");
+  if(dbArm()==1){
+    Serial.println("Arm button pressed");
   }
+ 
   // Update current_event first so current_state can update accordingly
   //testTapSensor();
   //testButton();
@@ -116,7 +115,7 @@ void loop() {
   
   // FSM implemented with switch cases and nested if statements, shows control flow of to-be-implemented features
   // If current_event is not relevant to current_state it is ignored
-  switch (current_state) {
+  /*switch (current_state) {
     case DISARMED:
       if (current_event == ARM_BUTTON_PRESSED) {
         current_state = ARMED;
@@ -185,7 +184,7 @@ void loop() {
   
   // Will execute function associated with current_state after it has updated
   }
-  handleStates();
+  handleStates();*/
 }
 // Will use the input data received from each sensor to properly determine the correct state
 // Will need to implement synchronization measures to protect shared value current_event at this state
@@ -202,9 +201,9 @@ void handleStates() {
       if(digitalRead(MOTION_SENSOR)){ //MOTION detector active; will advance to armed state if motion detected
         current_event=MOTION_DETECTED;
       }
-      if(dbArm()==1){//if arm button is pressed
-      current_event=ARM_BUTTON_PRESSED;
-      }
+      //if(dbArm()==1){//if arm button is pressed
+      //current_event=ARM_BUTTON_PRESSED;
+      //}
       break;
 
     case ARMED:
@@ -407,38 +406,65 @@ void testDoorSensor() {
   //digitalWrite(GREEN_LED, doorState);
 }
 
-//dbArm() - debeounces input to ARM_BUTTON and returns 1 or 0
-int dbArm(){ 
-  int reading = digitalRead(ARM_BUTTON);
+int dbArm(){   // Read the current button state
+int toreturn=0;
+  int currentButtonState = digitalRead(ARM_BUTTON);
   
-  if(reading!=lastArmState){
-    lastArmState=millis();
+  // Check if the button state has changed (due to noise or pressing)
+  if (currentButtonState != armlastButtonState) {
+    // Reset the debouncing timer
+    armlastDebounceTime = millis();
   }
-  if((millis()-lastArmTime)>buttonDebounceDelay){
-    if(reading!= armState){
-      armState=reading;    
-    if(armState==LOW){
-      lastArmTime=millis();
+  
+  // Check if the button state has been stable for longer than the debounce delay
+  if ((millis() - armlastDebounceTime) > debounceDelay) {
+    // If the button state has changed from our last debounced state
+    if (currentButtonState != armdebouncedButtonState) {
+      armdebouncedButtonState = currentButtonState;
       
-      return 1;
-    }}
+      // Only take action on button press (transition from HIGH to LOW)
+      if (armdebouncedButtonState == LOW) {
+        toreturn=1;
+      
+      }
+    }
+  }
+  armlastButtonState = currentButtonState;
+  if(toreturn){
+    return 1;
+  }
+  else{
     return 0;
   }
 }
-int dbPass(){ //same as dbArm just for the PASS button
-  int reading = digitalRead(PASS_BUTTON);
+int dbPass(){   // Read the current button state
+int toreturn=0;
+  int currentButtonState = digitalRead(PASS_BUTTON);
   
-  if(reading!=lastPassState){
-    lastPassTime=millis();
+  // Check if the button state has changed (due to noise or pressing)
+  if (currentButtonState != passlastButtonState) {
+    // Reset the debouncing timer
+    passlastDebounceTime = millis();
   }
-  if((millis()-lastPassTime)>buttonDebounceDelay){
-    if(reading!= passState){
-      passState=reading;    
-    if(passState==LOW){
-      lastPassTime=millis();
+  
+  // Check if the button state has been stable for longer than the debounce delay
+  if ((millis() - passlastDebounceTime) > debounceDelay) {
+    // If the button state has changed from our last debounced state
+    if (currentButtonState != passdebouncedButtonState) {
+      passdebouncedButtonState = currentButtonState;
       
-      return 1;
-    }}
+      // Only take action on button press (transition from HIGH to LOW)
+      if (passdebouncedButtonState == LOW) {
+        toreturn=1;
+      
+      }
+    }
+  }
+  passlastButtonState = currentButtonState;
+  if(toreturn){
+    return 1;
+  }
+  else{
     return 0;
   }
 }
