@@ -105,6 +105,8 @@ void loop() {
   if(dbArm()==1){
     Serial.println("Arm button pressed");
   }
+
+
   handleStates();
   // Update current_event first so current_state can update accordingly
   //testTapSensor();
@@ -196,22 +198,24 @@ unsigned long passwordTimer = 0;
 bool timerActive = false;
 
 void handleStates() {
-    switch (current_state) {
+  bool dbA = dbArm();
+  bool dbP = dbPass();
+  switch (current_state) {
+    dbPass();
     case DISARMED:
+    dbArm();
       digitalWrite(RED_LED, LOW);
       digitalWrite(BLUE_LED, LOW);
       // no lights will be enabled during disarm
+     
       if(digitalRead(MOTION_SENSOR)){ //MOTION detector active; will advance to armed state if motion detected
         current_event=MOTION_DETECTED;
       }
-      if(dbArm()==1){
+      if(dbA){
         current_event=ARM_BUTTON_PRESSED;
       }
-      if (dbPass()==1) {
-        current_event=UPDATE_BUTTON_PRESSED;
-        timerActive = true;
-        passwordTimer = millis();
-      }
+      
+      Serial.println("DISARMED");
       break;
 
     case ARMED:
@@ -223,6 +227,7 @@ void handleStates() {
       if(digitalRead(DOOR_SENSOR)){
         current_event=DOOR_OPENED;
       }
+      Serial.println("ARMED");
       break;
 
     case WARNING:
@@ -232,12 +237,13 @@ void handleStates() {
       if(digitalRead(DOOR_SENSOR)==HIGH){
         current_event=DOOR_OPENED;
       }
-      else if (dbArm()==1) {
+      else if (dbA) {
         current_event = ARM_BUTTON_PRESSED;
         timerActive = true;
         passwordTimer = millis();
       }
       // Function to detect door opening
+      Serial.println("WARNING");
       break;
 
     case ENTERING_PASSWORD:
@@ -266,6 +272,7 @@ void handleStates() {
           passwordTimer = 0;
         }
       }
+      Serial.println("ENTERING PASSWORD");
       break;
 
     case CHANGING_PASSWORD:
@@ -278,6 +285,7 @@ void handleStates() {
         enterPassword();
         if ((millis() - passwordTimer) > FIVE_SECONDS) {
           size_t size = getSize();
+          Serial.println(size);
           timerActive = false;
           enteredPassword = listToPWData(size);
           bool verify = checkPassword();
@@ -292,14 +300,14 @@ void handleStates() {
           passwordTimer = 0;
         }
       }
-
+      Serial.println("CHANGING PASSWORD");
       break;
 
     case UPDATING_PASSWORD:
       digitalWrite(RED_LED, LOW);
       digitalWrite(BLUE_LED, HIGH);
     // Function to enter a password of tap inputs
-      if (passwordTimer == 0 && dbPass()==1) {
+      if (passwordTimer == 0 && dbP) {
         timerActive = true;
         passwordTimer = millis();
       }
@@ -317,9 +325,13 @@ void handleStates() {
           current_event = IDLE;
         }
       }
+      Serial.println("UPDATING PASSWORD");
       break;
   
     case TRIGGERED:
+    digitalWrite(BLUE_LED, LOW);
+    digitalWrite(RED_LED, HIGH);
+    Serial.println("TRIGGERED");
       break;
   }
 }
@@ -340,6 +352,9 @@ bool checkPassword() {
   listSize = getSize();
   if (correctPassword->size != enteredPassword->size) {
     return false;
+  }
+  if (correctPassword->size == 1 && enteredPassword->size == 1) {
+    return true;
   }
   for (int i = 0; i < listSize; i++) {
     // 150ms tolerance , adjust until working properly
@@ -411,26 +426,7 @@ void testTapSensor() {
   }
 }
 
-// Source: Button Debounce Solution - CSE 321 UBLearns
-/*void testButton() {
-  int buttonState = digitalRead(BUTTON);
 
-  if (buttonState != prevButtonState) {
-    buttonDebounceTime = millis();
-  }
-
-  if (millis() - buttonDebounceTime > buttonDebounceDelay) {
-    if (buttonDebouncedState != buttonState) {
-      buttonDebouncedState = buttonState;
-      if (buttonState == LOW) {
-        buttonDebounceTime = millis();
-        blue_led_state = !blue_led_state;
-      }
-    }
-  }
-  digitalWrite(BLUE_LED, blue_led_state);
-  prevButtonState = buttonState;
-}*/
 
 void testDoorSensor() {
   int doorState = digitalRead(DOOR_SENSOR);
@@ -456,6 +452,7 @@ int toreturn=0;
       // Only take action on button press (transition from HIGH to LOW)
       if (armdebouncedButtonState == LOW) {
         toreturn=1;
+        current_event=ARM_BUTTON_PRESSED;
       
       }
     }
@@ -487,7 +484,9 @@ int toreturn=0;
       // Only take action on button press (transition from HIGH to LOW)
       if (passdebouncedButtonState == LOW) {
         toreturn=1;
-      
+        current_event=UPDATE_BUTTON_PRESSED;
+        timerActive = true;
+        passwordTimer = millis();
       }
     }
   }
