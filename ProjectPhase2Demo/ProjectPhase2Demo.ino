@@ -39,13 +39,11 @@ passwordData *enteredPassword;
 size_t listSize = 1;
 
 
-
-
 int TAP_SENSOR = 2;
 int RED_LED = 3;
 int BLUE_LED = 4;
 int PASS_BUTTON = 5;
-int ARM_BUTTON = 10;
+int ARM_BUTTON = 6;
 int DOOR_SENSOR = 7;
 int SPEAKER_OUT = 8;
 int MOTION_SENSOR=9;
@@ -107,7 +105,7 @@ void loop() {
   if(dbArm()==1){
     Serial.println("Arm button pressed");
   }
- 
+  handleStates();
   // Update current_event first so current_state can update accordingly
   //testTapSensor();
   //testButton();
@@ -115,12 +113,12 @@ void loop() {
   
   // FSM implemented with switch cases and nested if statements, shows control flow of to-be-implemented features
   // If current_event is not relevant to current_state it is ignored
-  /*switch (current_state) {
+  switch (current_state) {
     case DISARMED:
       if (current_event == ARM_BUTTON_PRESSED) {
         current_state = ARMED;
       }
-      if(current_event == MOTION_DETECTED){
+      else if(current_event == MOTION_DETECTED){
         current_state = ARMED;
       }
       else if (current_event == UPDATE_BUTTON_PRESSED) {
@@ -176,15 +174,18 @@ void loop() {
       break;
 
     case UPDATING_PASSWORD:
-      if (current_event == ARM_BUTTON_PRESSED) {
+      if (current_event == IDLE) {
         current_state = DISARMED;
       }
       
       break;
-  
-  // Will execute function associated with current_state after it has updated
+    
+    case TRIGGERED:
+      if (current_event == IDLE) {
+        current_state = DISARMED;
+      }
+      break;
   }
-  handleStates();*/
 }
 // Will use the input data received from each sensor to properly determine the correct state
 // Will need to implement synchronization measures to protect shared value current_event at this state
@@ -197,17 +198,25 @@ bool timerActive = false;
 void handleStates() {
     switch (current_state) {
     case DISARMED:
+      digitalWrite(RED_LED, LOW);
+      digitalWrite(BLUE_LED, LOW);
       // no lights will be enabled during disarm
       if(digitalRead(MOTION_SENSOR)){ //MOTION detector active; will advance to armed state if motion detected
         current_event=MOTION_DETECTED;
       }
-      //if(dbArm()==1){//if arm button is pressed
-      //current_event=ARM_BUTTON_PRESSED;
-      //}
+      if(dbArm()==1){
+        current_event=ARM_BUTTON_PRESSED;
+      }
+      if (dbPass()==1) {
+        current_event=UPDATE_BUTTON_PRESSED;
+        timerActive = true;
+        passwordTimer = millis();
+      }
       break;
 
     case ARMED:
       digitalWrite(RED_LED, HIGH);
+      digitalWrite(BLUE_LED, LOW);
       if(digitalRead(MOTION_SENSOR)){
         current_event=MOTION_DETECTED;
       }
@@ -223,68 +232,90 @@ void handleStates() {
       if(digitalRead(DOOR_SENSOR)==HIGH){
         current_event=DOOR_OPENED;
       }
-
+      else if (dbArm()==1) {
+        current_event = ARM_BUTTON_PRESSED;
+        timerActive = true;
+        passwordTimer = millis();
+      }
       // Function to detect door opening
       break;
 
     case ENTERING_PASSWORD:
       // Detecing door opening
+      digitalWrite(RED_LED, HIGH);
+      digitalWrite(BLUE_LED, LOW);
       if (digitalRead(DOOR_SENSOR) == HIGH) {
         current_event = DOOR_OPENED;
       }
     // Function to match tap inputs to a preset password
-      enterPassword();
-      if ((millis() - passwordTimer) > FIVE_SECONDS) {
-        size_t size = getSize();
-        timerActive = false;
-        enteredPassword = listToPWData(size);
-        bool verify = checkPassword();
-        if (verify) {
-          current_event = CORRECT_PASSWORD;
+      if (timerActive) {
+        enterPassword();
+        if ((millis() - passwordTimer) > FIVE_SECONDS) {
+          size_t size = getSize();
+          timerActive = false;
+          enteredPassword = listToPWData(size);
+          bool verify = checkPassword();
+          if (verify) {
+            current_event = CORRECT_PASSWORD;
+          }
+          else {
+            current_event = INCORRECT_PASSWORD;
+          }
+          resetList();
+          free(enteredPassword);
+          passwordTimer = 0;
         }
-        else {
-          current_event = INCORRECT_PASSWORD;
-        }
-        resetList();
-        free(enteredPassword);
-        passwordTimer = 0;
       }
       break;
 
     case CHANGING_PASSWORD:
+      digitalWrite(RED_LED, HIGH);
+      digitalWrite(BLUE_LED, LOW);
       if (digitalRead(DOOR_SENSOR) == HIGH) {
         current_event = DOOR_OPENED;
       }
-      enterPassword();
-      if ((millis() - passwordTimer) > FIVE_SECONDS) {
-        size_t size = getSize();
-        timerActive = false;
-        enteredPassword = listToPWData(size);
-        bool verify = checkPassword();
-        if (verify) {
-          current_event = CORRECT_PASSWORD;
+      if (timerActive) {
+        enterPassword();
+        if ((millis() - passwordTimer) > FIVE_SECONDS) {
+          size_t size = getSize();
+          timerActive = false;
+          enteredPassword = listToPWData(size);
+          bool verify = checkPassword();
+          if (verify) {
+            current_event = CORRECT_PASSWORD;
+          }
+          else {
+            current_event = INCORRECT_PASSWORD;
+          }
+          resetList();
+          free(enteredPassword);
+          passwordTimer = 0;
         }
-        else {
-          current_event = INCORRECT_PASSWORD;
-        }
-        resetList();
-        free(enteredPassword);
-        passwordTimer = 0;
       }
+
       break;
 
     case UPDATING_PASSWORD:
+      digitalWrite(RED_LED, LOW);
+      digitalWrite(BLUE_LED, HIGH);
     // Function to enter a password of tap inputs
-      enterPassword();
-      if ((millis() - passwordTimer) > FIVE_SECONDS) {
-        size_t size = getSize();
-        timerActive = false;
-        correctPassword = listToPWData(size);
-        listSize = size;
-        resetList();
-        passwordTimer = 0;
+      if (passwordTimer == 0 && dbPass()==1) {
+        timerActive = true;
+        passwordTimer = millis();
+      }
 
-        current_event = IDLE;
+      if (timerActive) {
+        enterPassword();
+        if ((millis() - passwordTimer) > FIVE_SECONDS) {
+          size_t size = getSize();
+          timerActive = false;
+          correctPassword = listToPWData(size);
+          listSize = size;
+          resetList();
+          passwordTimer = 0;
+
+          current_event = IDLE;
+        }
       }
       break;
   
