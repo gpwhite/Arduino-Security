@@ -119,6 +119,7 @@ void loop() {
     case DISARMED:
       if (current_event == ARM_BUTTON_PRESSED) {
         current_state = ARMED;
+        current_event = IDLE;
       }
       else if(current_event == MOTION_DETECTED){
         current_state = ARMED;
@@ -135,6 +136,9 @@ void loop() {
       }
       else if (current_event == DOOR_OPENED) {
         current_state = TRIGGERED;
+      }
+      else if (current_event == ARM_BUTTON_PRESSED) {
+        current_state = ENTERING_PASSWORD;
       }
       
       break;
@@ -263,11 +267,15 @@ void handleStates() {
           bool verify = checkPassword();
           if (verify) {
             current_event = CORRECT_PASSWORD;
+            Serial.println("CORRECT");
           }
           else {
             current_event = INCORRECT_PASSWORD;
+            Serial.println("INCORRECT");
           }
           resetList();
+          //printCorrectPassword();
+          //printEnteredPassword();
           free(enteredPassword);
           passwordTimer = 0;
         }
@@ -285,17 +293,20 @@ void handleStates() {
         enterPassword();
         if ((millis() - passwordTimer) > FIVE_SECONDS) {
           size_t size = getSize();
-          Serial.println(size);
           timerActive = false;
           enteredPassword = listToPWData(size);
           bool verify = checkPassword();
           if (verify) {
             current_event = CORRECT_PASSWORD;
+            Serial.println("CORRECT");
           }
           else {
             current_event = INCORRECT_PASSWORD;
+            Serial.println("INCORRECT");
           }
           resetList();
+          //printCorrectPassword();
+          //printEnteredPassword();
           free(enteredPassword);
           passwordTimer = 0;
         }
@@ -316,8 +327,11 @@ void handleStates() {
         enterPassword();
         if ((millis() - passwordTimer) > FIVE_SECONDS) {
           size_t size = getSize();
+          Serial.println(size);
           timerActive = false;
+          free(correctPassword);
           correctPassword = listToPWData(size);
+          printCorrectPassword();
           listSize = size;
           resetList();
           passwordTimer = 0;
@@ -329,9 +343,9 @@ void handleStates() {
       break;
   
     case TRIGGERED:
-    digitalWrite(BLUE_LED, LOW);
-    digitalWrite(RED_LED, HIGH);
-    Serial.println("TRIGGERED");
+      digitalWrite(BLUE_LED, LOW);
+      digitalWrite(RED_LED, HIGH);
+      Serial.println("TRIGGERED");
       break;
   }
 }
@@ -349,16 +363,28 @@ void enterPassword() {
 }
 
 bool checkPassword() {
+  long TOLERANCE = 75;
   listSize = getSize();
+  printCorrectPassword();
+  printEnteredPassword();
   if (correctPassword->size != enteredPassword->size) {
+    Serial.println("Incorrect Size value");
     return false;
   }
   if (correctPassword->size == 1 && enteredPassword->size == 1) {
     return true;
   }
-  for (int i = 0; i < listSize; i++) {
+  for (int i = 1; i < listSize; i++) {
     // 150ms tolerance , adjust until working properly
-    if (!((correctPassword->times[i] - 75) < enteredPassword->times[i] && ((correctPassword->times[i] + 75) > enteredPassword->times[i]))) {
+    if ((long)(correctPassword->times[i] - enteredPassword->times[i]) > TOLERANCE) {
+      Serial.println("Tap Time too fast");
+      Serial.println(i);
+      return false;
+    }
+    
+    else if ((long)(enteredPassword->times[i] - correctPassword->times[i]) > TOLERANCE) {
+      Serial.println("Tap Time too slow");
+      Serial.println(i);
       return false;
     }
   }
@@ -367,7 +393,14 @@ bool checkPassword() {
 
 // LINKED LIST FUNCTIONS
 void appendNode(unsigned long t) {
-  if (head->time == 0) {
+  if (head == NULL) {
+    head = malloc(sizeof(inputListNode));
+    head->time = t;
+    head->next = NULL;
+    tail = head;
+  }
+  
+  else if (head->time == 0) {
     head->time = t;
   }
   else {
@@ -377,6 +410,7 @@ void appendNode(unsigned long t) {
     tail->next = newNode;
     tail = newNode;
   }  
+  Serial.println("TAP APPENDED");
 }
 
 void resetList() {
@@ -453,6 +487,10 @@ int toreturn=0;
       if (armdebouncedButtonState == LOW) {
         toreturn=1;
         current_event=ARM_BUTTON_PRESSED;
+        if (current_state == ARMED || current_state == WARNING) {
+          timerActive = true;
+          passwordTimer = millis();
+        }
       
       }
     }
@@ -503,4 +541,22 @@ void testSpeaker(){
   delay(300);
   digitalWrite(SPEAKER_OUT,LOW);
   delay(300);
+}
+
+void printCorrectPassword() {
+  Serial.println(correctPassword->size);
+  for (int i = 0; i < correctPassword->size; i++) {
+    Serial.print(correctPassword->times[i]);
+    Serial.print(", ");
+  }
+  Serial.println("");
+}
+
+void printEnteredPassword() {
+  Serial.println(enteredPassword->size);
+  for (int i = 0; i < enteredPassword->size; i++) {
+    Serial.print(enteredPassword->times[i]);
+    Serial.print(", ");
+  }
+  Serial.println("");
 }
