@@ -46,7 +46,7 @@ int TAP_SENSOR = 2;
 int RED_LED = 3;
 int BLUE_LED = 4;
 int PASS_BUTTON = 5;
-int ARM_BUTTON = 6;
+int ARM_BUTTON = 10;
 int DOOR_SENSOR = 7;
 int SPEAKER_OUT = 8;
 int MOTION_SENSOR=9;
@@ -62,7 +62,7 @@ const unsigned long tapDebounceDelay = 200; // Tap Sensor is very sensitive, so 
 int prevButtonState = HIGH;
 int buttonDebouncedState = HIGH;
 unsigned long buttonDebounceTime = 0;  
-const unsigned long buttonDebounceDelay = 20;
+const unsigned long buttonDebounceDelay = 1;
 int lastArmState=LOW;
 int lastPassState=LOW;
 int armState;
@@ -102,6 +102,13 @@ void setup() {
 }
 
 void loop() {
+  
+  if(dbPass()){
+    Serial.println("Password Button pressed");
+  }
+  if(dbArm()){
+    Serial.println("Arm Button pressed");
+  }
   // Update current_event first so current_state can update accordingly
   //testTapSensor();
   //testButton();
@@ -120,6 +127,7 @@ void loop() {
       else if (current_event == UPDATE_BUTTON_PRESSED) {
         current_state = CHANGING_PASSWORD;
       }
+      
       break;
 
     case ARMED:
@@ -129,6 +137,7 @@ void loop() {
       else if (current_event == DOOR_OPENED) {
         current_state = TRIGGERED;
       }
+      
       break;
 
     case WARNING:
@@ -138,6 +147,7 @@ void loop() {
       else if (current_event == DOOR_OPENED) {
         current_state = TRIGGERED;
       }
+      
       break;
 
     case ENTERING_PASSWORD:
@@ -150,9 +160,10 @@ void loop() {
       else if (current_event == CORRECT_PASSWORD) {
         current_state = DISARMED;
       }
+      
       break;
 
-    /*case CHANGING_PASSWORD:
+    case CHANGING_PASSWORD:
       if (current_event == DOOR_OPENED) {
         current_state = TRIGGERED;
       }
@@ -162,14 +173,16 @@ void loop() {
       else if (current_event == CORRECT_PASSWORD) {
         current_state = UPDATING_PASSWORD;
       }
+      
       break;
 
     case UPDATING_PASSWORD:
-      if (current_event == SINGLE_BUTTON_PRESS) {
+      if (current_event == ARM_BUTTON_PRESSED) {
         current_state = DISARMED;
       }
+      
       break;
-  */
+  
   // Will execute function associated with current_state after it has updated
   }
   handleStates();
@@ -286,7 +299,7 @@ void enterPassword() {
   unsigned long t = millis();
   // Only Update LED when TAP_SENSOR goes from high to low
   if (tapState == LOW) {
-    if ((t - tapDebounceTime) > tapDelay) {
+    if ((t - tapDebounceTime) > tapDebounceDelay) {
       tapDebounceTime = t;
       appendNode(t);
     }
@@ -300,7 +313,7 @@ bool checkPassword() {
   }
   for (int i = 0; i < listSize; i++) {
     // 150ms tolerance , adjust until working properly
-    if (!((correctPassword->times[i] - 75) < enteredPassword->times[i] && (correctPassword->times[i] + 75) > enteredPassword[i])) {
+    if (!((correctPassword->times[i] - 75) < enteredPassword->times[i] && ((correctPassword->times[i] + 75) > enteredPassword->times[i]))) {
       return false;
     }
   }
@@ -395,16 +408,18 @@ void testDoorSensor() {
 }
 
 //dbArm() - debeounces input to ARM_BUTTON and returns 1 or 0
-int dbArm(){
+int dbArm(){ 
   int reading = digitalRead(ARM_BUTTON);
+  
   if(reading!=lastArmState){
-    lastArmTime=millis();
+    lastArmState=millis();
   }
   if((millis()-lastArmTime)>buttonDebounceDelay){
     if(reading!= armState){
       armState=reading;    
     if(armState==LOW){
       lastArmTime=millis();
+      
       return 1;
     }}
     return 0;
@@ -412,14 +427,16 @@ int dbArm(){
 }
 int dbPass(){ //same as dbArm just for the PASS button
   int reading = digitalRead(PASS_BUTTON);
+  
   if(reading!=lastPassState){
-    lastPassState=millis();
+    lastPassTime=millis();
   }
   if((millis()-lastPassTime)>buttonDebounceDelay){
     if(reading!= passState){
       passState=reading;    
     if(passState==LOW){
       lastPassTime=millis();
+      
       return 1;
     }}
     return 0;
