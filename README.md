@@ -10,7 +10,7 @@ Sean Fluman & Gregory White
 
 # **Purpose**
 ***
-The purpose of this project is to create an affordable home security system built on the Arduino platform. The system provides security measures which when triggered, will sound an alarm in order to alert the user. 
+The purpose of this project is to create an affordable home security system built on the Arduino platform. The system provides security measures which when triggered, will sound an alarm in order to alert the user. The system is designed to be easily disarmed by the user with the use of a "knock sensor" which can be installed on the users door in order to make disarming a convenient process. The password is remembered as a tapping rythm inputted by the user.
 
 ## **Sensors Used**
 ***
