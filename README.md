@@ -35,7 +35,7 @@ This software is designed to work with any standard Arduino platform capable of 
 -Uses three wires, one should connect to Vcc(Typically 5-12v) one should connect to GND, and the data pin should connect to the digital input pin.     
 -Prouduces high voltage output when motion is detected.  
 
-#**Buttons**
+# **Buttons**
 This design uses two buttons
 1) A password button
 2) An arm/disarm button
