@@ -21,11 +21,14 @@ typedef enum event {
 state current_state;
 event current_event;
 
+// Knock password size will vary each time, so a linked list is used for dynamic sizing 
 typedef struct inputListNode {
   unsigned long time;
   inputListNode *next;
 } inputListNode;
 
+// Once the entered password is processed, it is stored in a passwordData struct using Flexible Array Members to store different sized arrays
+// Source, Geeks for Geeks: https://www.geeksforgeeks.org/c/flexible-array-members-structure-c/
 typedef struct passwordData {
   size_t size;
   unsigned long times[];
@@ -48,13 +51,14 @@ int DOOR_SENSOR = 7;
 int SPEAKER_OUT = 8;
 int MOTION_SENSOR=9;
 
-
+// Testing Variables
 bool red_led_state = false;
 bool blue_led_state = false;
 
 // Debouncing Variables
-unsigned long tapDebounceTime = 0;  
-const unsigned long tapDebounceDelay = 200; // Tap Sensor is very sensitive, so it requires a high debounce delay for accurate inputs. It could also be my implementation thats the problem, look into fixing to allow for faster tapping passwords
+unsigned long tapDebounceTime = 0;
+// Tap Sensor is very sensitive, so it requires a high debounce delay for accurate inputs. Limits total number of knock inputs to 25 (5000ms / 200ms)
+const unsigned long tapDebounceDelay = 200;  
 
 int passlastButtonState = HIGH;      // Previous reading from the button
 int passdebouncedButtonState = HIGH; 
@@ -79,6 +83,7 @@ void setup() {
   pinMode(ARM_BUTTON,INPUT_PULLUP);
   pinMode(PASS_BUTTON,INPUT_PULLUP);
 
+  // Initializing Password related structs
   head = malloc(sizeof(inputListNode));
   if (head == NULL) {
     Serial.println("Linked List Allocation failed");
@@ -92,7 +97,7 @@ void setup() {
     Serial.println("Password Data Allocation failed");
   }
   correctPassword->size = listSize;
-  correctPassword->times[0] = 0; // MAKE SURE NOT TO TOUCH SENSOR WHEN SETTING INITIAL PASSWORD, OR ELSE REBOOT IS NECESSARY
+  correctPassword->times[0] = 0; // Initial Correct Password is 0 knocks entered
 
   Serial.begin(115200);
 }
@@ -106,15 +111,13 @@ void loop() {
     Serial.println("Arm button pressed");
   }
 
-
+  // Updates current_event to from sensor/button inputs every iteration
   handleStates();
-  // Update current_event first so current_state can update accordingly
   //testTapSensor();
   //testButton();
   //testDoorSensor();
   
-  // FSM implemented with switch cases and nested if statements, shows control flow of to-be-implemented features
-  // If current_event is not relevant to current_state it is ignored
+  // FSM implemented with switch cases and nested if statements
   switch (current_state) {
     case DISARMED:
       if (current_event == ARM_BUTTON_PRESSED) {
@@ -193,28 +196,27 @@ void loop() {
       break;
   }
 }
-// Will use the input data received from each sensor to properly determine the correct state
-// Will need to implement synchronization measures to protect shared value current_event at this state
-void handleEvents() {}
 
-const unsigned long FIVE_SECONDS = 5000;
+// Password Timer varaibles
+const unsigned long FIVE_SECONDS = 5000; //Length of time used to accept password inputs
 unsigned long passwordTimer = 0;
 bool timerActive = false;
 
+// Each case has if statements that correspond to their behavior in the main FSM in loop()
 void handleStates() {
   bool dbA = dbArm();
   bool dbP = dbPass();
   switch (current_state) {
     dbPass();
     case DISARMED:
-    dbArm();
+      dbArm();
       digitalWrite(RED_LED, LOW);
       digitalWrite(BLUE_LED, LOW);
-      // no lights will be enabled during disarm
-     
-      if(digitalRead(MOTION_SENSOR)){ //MOTION detector active; will advance to armed state if motion detected
+      //MOTION detector active; will advance to ARMED state if motion detected
+      if(digitalRead(MOTION_SENSOR)){
         current_event=MOTION_DETECTED;
       }
+      // If Arm button is pressed, move to ARMED state in next iteration
       if(dbA){
         current_event=ARM_BUTTON_PRESSED;
       }
@@ -225,9 +227,11 @@ void handleStates() {
     case ARMED:
       digitalWrite(RED_LED, HIGH);
       digitalWrite(BLUE_LED, LOW);
+      //MOTION detector active; will advance to WARNING state if motion detected
       if(digitalRead(MOTION_SENSOR)){
         current_event=MOTION_DETECTED;
       }
+      // If door sensor is activated, move to TRIGGERED state in next iteration
       if(digitalRead(DOOR_SENSOR)){
         current_event=DOOR_OPENED;
       }
@@ -235,12 +239,12 @@ void handleStates() {
       break;
 
     case WARNING:
-      // Function to turn on red and blue 
       digitalWrite(RED_LED,HIGH);
       digitalWrite(BLUE_LED, HIGH);
       if(digitalRead(DOOR_SENSOR)==HIGH){
         current_event=DOOR_OPENED;
       }
+      // If Arm button is pressed in warning, move to entering password, redeclare password variables
       else if (dbA) {
         current_event = ARM_BUTTON_PRESSED;
         timerActive = true;
