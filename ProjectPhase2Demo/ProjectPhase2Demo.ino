@@ -27,7 +27,7 @@ typedef struct inputListNode {
   inputListNode *next;
 } inputListNode;
 
-// Once the entered password is processed, it is stored in a passwordData struct using Flexible Array Members to store different sized arrays
+// Once the entered password is processed, it is stored in a passwordData struct using Flexible Array Members (FAM) to store different sized arrays
 // Source, Geeks for Geeks: https://www.geeksforgeeks.org/c/flexible-array-members-structure-c/
 typedef struct passwordData {
   size_t size;
@@ -261,7 +261,7 @@ void handleStates() {
       if (digitalRead(DOOR_SENSOR) == HIGH) {
         current_event = DOOR_OPENED;
       }
-    // Function to match tap inputs to a preset password
+      // timerActive = true when dbA == 1 in WARNING or ARMED state
       if (timerActive) {
         enterPassword();
         if ((millis() - passwordTimer) > FIVE_SECONDS) {
@@ -270,10 +270,12 @@ void handleStates() {
           enteredPassword = listToPWData(size);
           bool verify = checkPassword();
           if (verify) {
+            // Sends FSM to DISARMED
             current_event = CORRECT_PASSWORD;
             Serial.println("CORRECT");
           }
           else {
+            // Sends FSM to TRIGGERED
             current_event = INCORRECT_PASSWORD;
             Serial.println("INCORRECT");
           }
@@ -293,6 +295,7 @@ void handleStates() {
       if (digitalRead(DOOR_SENSOR) == HIGH) {
         current_event = DOOR_OPENED;
       }
+      // timerActive = true when dpPass == 1 in CHANGING_PASSWORD state
       if (timerActive) {
         enterPassword();
         if ((millis() - passwordTimer) > FIVE_SECONDS) {
@@ -301,10 +304,12 @@ void handleStates() {
           enteredPassword = listToPWData(size);
           bool verify = checkPassword();
           if (verify) {
+            // Sends FSM to UPDATING_PASSWORD
             current_event = CORRECT_PASSWORD;
             Serial.println("CORRECT");
           }
           else {
+            // Sends FSM to TRIGGERED
             current_event = INCORRECT_PASSWORD;
             Serial.println("INCORRECT");
           }
@@ -327,19 +332,18 @@ void handleStates() {
         passwordTimer = millis();
       }
 
+      // timerActive = true when dpP == 1 while in UPDATING_PASSWORD state
       if (timerActive) {
         enterPassword();
         if ((millis() - passwordTimer) > FIVE_SECONDS) {
           size_t size = getSize();
-          Serial.println(size);
           timerActive = false;
           free(correctPassword);
           correctPassword = listToPWData(size);
-          printCorrectPassword();
           listSize = size;
           resetList();
           passwordTimer = 0;
-
+          // Always sends FSM back to DISARMED state
           current_event = IDLE;
         }
       }
@@ -354,6 +358,7 @@ void handleStates() {
   }
 }
 
+// Takes user input on knock sensor
 void enterPassword() {
   int tapState = digitalRead(TAP_SENSOR);
   unsigned long t = millis();
@@ -361,6 +366,7 @@ void enterPassword() {
   if (tapState == LOW) {
     if ((t - tapDebounceTime) > tapDebounceDelay) {
       tapDebounceTime = t;
+      // Update Linked List with debounced time
       appendNode(t);
     }
   }
@@ -369,33 +375,32 @@ void enterPassword() {
 bool checkPassword() {
   long TOLERANCE = 75;
   listSize = getSize();
-  printCorrectPassword();
-  printEnteredPassword();
+  // If password sizes are not equal, entered password cannot be the correct password
   if (correctPassword->size != enteredPassword->size) {
     Serial.println("Incorrect Size value");
     return false;
   }
+  // Initial empty password edge case
   if (correctPassword->size == 1 && enteredPassword->size == 1) {
     return true;
   }
   for (int i = 1; i < listSize; i++) {
-    // 150ms tolerance , adjust until working properly
+    // Tolerance added because people are not perfect metronomes
+    // Accepted Range = correctTime - TOLERANECE <= enteredTime <= correctTime + TOLERANCE
     if ((long)(correctPassword->times[i] - enteredPassword->times[i]) > TOLERANCE) {
       Serial.println("Tap Time too fast");
-      Serial.println(i);
       return false;
     }
     
     else if ((long)(enteredPassword->times[i] - correctPassword->times[i]) > TOLERANCE) {
       Serial.println("Tap Time too slow");
-      Serial.println(i);
       return false;
     }
   }
   return true;
 }
 
-// LINKED LIST FUNCTIONS
+// LINKED LIST HELPER FUNCTIONS
 void appendNode(unsigned long t) {
   if (head == NULL) {
     head = malloc(sizeof(inputListNode));
@@ -403,7 +408,6 @@ void appendNode(unsigned long t) {
     head->next = NULL;
     tail = head;
   }
-  
   else if (head->time == 0) {
     head->time = t;
   }
@@ -417,6 +421,7 @@ void appendNode(unsigned long t) {
   Serial.println("TAP APPENDED");
 }
 
+// Frees memory of inputListNode, so it can be reused in future password inputs
 void resetList() {
   while (head != NULL) {
     inputListNode *temp = head->next;
@@ -436,14 +441,16 @@ size_t getSize() {
   return out;
 }
 
-// Remember to site geeks for geeks Flexible Array Member
+// Converts Linked List stored at inputListNode *head to a struct storing its size and time values
 passwordData* listToPWData(size_t listSize) {
+  // Geeks For Geeks FAM implementation
   passwordData *data = malloc(sizeof(passwordData) + sizeof(unsigned long) * listSize);
   data->size = listSize;
   unsigned long firstTap = head->time;
   inputListNode *temp = head;
 
   for (int i = 0; i < listSize; i++) {
+    // Each time value is zeroed out from the first tap so passwords entered at later times can still be compared
     data->times[i] = temp->time - firstTap;
     temp = temp->next;
   }
@@ -464,11 +471,9 @@ void testTapSensor() {
   }
 }
 
-
-
 void testDoorSensor() {
   int doorState = digitalRead(DOOR_SENSOR);
-  //digitalWrite(GREEN_LED, doorState);
+  digitalWrite(RED_LED, doorState);
 }
 
 int dbArm(){   // Read the current button state
@@ -547,6 +552,7 @@ void testSpeaker(){
   delay(300);
 }
 
+// Password Debug functions
 void printCorrectPassword() {
   Serial.println(correctPassword->size);
   for (int i = 0; i < correctPassword->size; i++) {
