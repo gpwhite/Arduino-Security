@@ -459,22 +459,7 @@ passwordData* listToPWData(size_t listSize) {
 }
 
 
-void testTapSensor() {
-  int tapState = digitalRead(TAP_SENSOR);
-  // Only Update LED when TAP_SENSOR goes from high to low
-  if (tapState == LOW) {
-    if (millis() - tapDebounceTime > tapDebounceDelay) {
-      tapDebounceTime = millis();
-      red_led_state = !red_led_state;
-      digitalWrite(RED_LED, red_led_state);
-    }
-  }
-}
 
-void testDoorSensor() {
-  int doorState = digitalRead(DOOR_SENSOR);
-  digitalWrite(RED_LED, doorState);
-}
 
 int dbArm(){    // dbArm(); handles the input from the arm/disarm button(ARM_BUTTON) uses the standard in class debounce solution
 int toreturn=0;
@@ -552,28 +537,4 @@ int toreturn=0;
     return 0;
   }
 }
-void testSpeaker(){ //Writes high and low inputs to the speaker to confirm functionality 
-  digitalWrite(SPEAKER_OUT,HIGH);
-  delay(300);
-  digitalWrite(SPEAKER_OUT,LOW);
-  delay(300);
-}
 
-// Password Debug functions
-void printCorrectPassword() { //Used when debugging password to view the times of inputs of inputted password vs previously set password
-  Serial.println(correctPassword->size);
-  for (int i = 0; i < correctPassword->size; i++) {
-    Serial.print(correctPassword->times[i]);
-    Serial.print(", ");
-  }
-  Serial.println("");
-}
-
-void printEnteredPassword() {
-  Serial.println(enteredPassword->size);
-  for (int i = 0; i < enteredPassword->size; i++) {
-    Serial.print(enteredPassword->times[i]);
-    Serial.print(", ");
-  }
-  Serial.println("");
-}
