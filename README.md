@@ -12,7 +12,7 @@ Sean Fluman & Gregory White
 ***
 The purpose of this project is to create an affordable home security system built on the Arduino platform. The system provides security measures which when triggered, will sound an alarm in order to alert the user. The system is designed to be easily disarmed by the user with the use of a "knock sensor" which can be installed on the users door in order to make disarming a convenient process. The password is remembered as a tapping rythm inputted by the user.
 
-## **Sensors Used**
+# **Sensors Used**
 ***
 This software is designed to work with any standard Arduino platform capable of spporting digital input and outputs. The design relies on three sensors, denoted as 
 1) Knock Sensor
@@ -42,9 +42,9 @@ This design uses two buttons
 
 The effect they each have on the control flow is explained below.
 
-# **Password Button**
+### **Password Button**
 Used when the machine is in disarmed state. The first press will prompt the user to enter the correct password. If the user enters the correct password, the button may be pressed again to enter a new password. If the incorrect password is entered, the alarm will trigger. 
 
-# **Arm/Disarm Button**
+### **Arm/Disarm Button**
 Used to advance the system from disarmed state into armed state manually. Once the system is in warning mode, either through the use of the arm button or the detection of motion, the disarm button may be pressed in order to disarm the system. When the button is pressed, the user will be prompted to enter a password, if the password is correctly inputted, the system will enter disarmed state. If the password is incorrect, the alarm will sound. 
 
