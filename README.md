@@ -31,7 +31,7 @@ This software is designed to work with any standard Arduino platform capable of 
 -Produces high voltage output when knock sensor is tapped.  
 
 **Motion Sensor:**  
--Uses any standard PIR(Passive Infared) module.
--Uses three wires, one should connect to Vcc(Typically 5-12v) one should connect to GND, and the data pin should connect to the digital input pin.   
+-Uses any standard PIR(Passive Infared) module.  
+-Uses three wires, one should connect to Vcc(Typically 5-12v) one should connect to GND, and the data pin should connect to the digital input pin.     
 -Prouduces high voltage output when motion is detected.  
 
