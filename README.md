@@ -8,12 +8,13 @@ Sean Fluman & Gregory White
 
 
 
-Purpose  
+# **Purpose**
 ***
+The purpose of this project is to create an affordable home security system built on the Arduino platform. The system provides security measures which when triggered, will sound an alarm in order to alert the user. 
 
 ## **Sensors Used**
 ***
-This software is designed to work with any standard arduino platform capable of spporting digital input and outputs. The design relies on three sensors, denoted as 
+This software is designed to work with any standard Arduino platform capable of spporting digital input and outputs. The design relies on three sensors, denoted as 
 1) Knock Sensor
 2) Door Sensor
 3) Motion Sensor
