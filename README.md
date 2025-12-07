@@ -2,6 +2,5 @@ Arduino-Security
 ---
 Created By:
 
-Sean Fluman
-Gregory White
+Sean Fluman & Gregory White
 ---
