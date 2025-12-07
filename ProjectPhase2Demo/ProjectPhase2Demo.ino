@@ -503,7 +503,7 @@ int toreturn=0;
     return 0;
   }
 }
-int dbPass(){   // Read the current button state
+int dbPass(){   // dbPass(); handles the input from the password control button(PASS_BUTTON), uses the standard in class debounce solution
 int toreturn=0;
   int currentButtonState = digitalRead(PASS_BUTTON);
   
