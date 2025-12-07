@@ -24,8 +24,8 @@ Door Sensor:
 -Contains two wires, one is connected to digital input pin, other is connected to GND. 
 
 Knock Sensor:  
--KY-031 Knock Sensor Module   
--Uses three wires, one should connect to Vcc(5v) one should connect to GND, and the data pin should connect to the digital input pin. 
--Debounced in software 
+-KY-031 Knock Sensor Module.   
+-Uses three wires, one should connect to Vcc(5v) one should connect to GND, and the data pin should connect to the digital input pin.   
+-Debounced in software.   
 
 
