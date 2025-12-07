@@ -35,3 +35,16 @@ This software is designed to work with any standard Arduino platform capable of 
 -Uses three wires, one should connect to Vcc(Typically 5-12v) one should connect to GND, and the data pin should connect to the digital input pin.     
 -Prouduces high voltage output when motion is detected.  
 
+#**Buttons**
+This design uses two buttons
+1) A password button
+2) An arm/disarm button
+
+The effect they each have on the control flow is explained below.
+
+# **Password Button**
+Used when the machine is in disarmed state. The first press will prompt the user to enter the correct password. If the user enters the correct password, the button may be pressed again to enter a new password. If the incorrect password is entered, the alarm will trigger. 
+
+# **Arm/Disarm Button**
+Used to advance the system from disarmed state into armed state manually. Once the system is in warning mode, either through the use of the arm button or the detection of motion, the disarm button may be pressed in order to disarm the system. When the button is pressed, the user will be prompted to enter a password, if the password is correctly inputted, the system will enter disarmed state. If the password is incorrect, the alarm will sound. 
+
