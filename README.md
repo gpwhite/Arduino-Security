@@ -36,6 +36,7 @@ This software is designed to work with any standard Arduino platform capable of 
 -Prouduces high voltage output when motion is detected.  
 
 # **Buttons**
+***
 This design uses two buttons
 1) A password button
 2) An arm/disarm button
@@ -48,3 +49,18 @@ Used when the machine is in disarmed state. The first press will prompt the user
 ### **Arm/Disarm Button**
 Used to advance the system from disarmed state into armed state manually. Once the system is in warning mode, either through the use of the arm button or the detection of motion, the disarm button may be pressed in order to disarm the system. When the button is pressed, the user will be prompted to enter a password, if the password is correctly inputted, the system will enter disarmed state. If the password is incorrect, the alarm will sound. 
 
+# **User Guide
+***
+### Creating a password
+- While in the DISARMED STATE (both LEDs turned off), press the update password button
+- Then, DO NOT touch the knock sensor until the red LED turns off, and the blue LED turns on. This will take 5 seconds.
+- Press the update password button and input your desired knocking rhythm password
+
+### Arming the Alarm System
+- Press the arm system button, this will turn the red LED on
+- Once activated, the alarm speaker will trigger if the door sensor detects being opened without entering a password
+- If motion is detected by the PIR sensor the blue LED will turn on alongside the red LED
+
+### Disabling the Alarm System
+- To disable the system, press the arm system button again. Doing so will give the user a 5 second window to input the correct password through the knock sensor.
+- If the number of knocks was inputed with the correct timing, the system will disarm turning both LEDs off. Otherwise, the alarm will trigger and output a high pitched noise until disabled.
