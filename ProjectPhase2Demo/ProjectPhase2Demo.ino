@@ -476,7 +476,7 @@ void testDoorSensor() {
   digitalWrite(RED_LED, doorState);
 }
 
-int dbArm(){   // Read the current button state
+int dbArm(){    // dbArm(); handles the input from the arm/disarm button(ARM_BUTTON) uses the standard in class debounce solution
 int toreturn=0;
   int currentButtonState = digitalRead(ARM_BUTTON);
   
@@ -537,7 +537,14 @@ int toreturn=0;
       }
     }
   }
+
+  //NOTE:
+  //-------------------------------------------------------------------------------------------------------------------------------------------------------------
+  // dbArm() and dbPass() are modified versions of the provided debounce solution provided in the file titled CSE321_ Debounce solution.zip on UBLearns
+  //-------------------------------------------------------------------------------------------------------------------------------------------------------------
+  
   passlastButtonState = currentButtonState;
+  // Returns true or false based on button state, HIGH input will result in a 0, LOW input will result in a 1. This is opposite to actual input, however this makes more logical sense for our use. 
   if(toreturn){
     return 1;
   }
@@ -545,7 +552,7 @@ int toreturn=0;
     return 0;
   }
 }
-void testSpeaker(){
+void testSpeaker(){ //Writes high and low inputs to the speaker to confirm functionality 
   digitalWrite(SPEAKER_OUT,HIGH);
   delay(300);
   digitalWrite(SPEAKER_OUT,LOW);
@@ -553,7 +560,7 @@ void testSpeaker(){
 }
 
 // Password Debug functions
-void printCorrectPassword() {
+void printCorrectPassword() { //Used when debugging password to view the times of inputs of inputted password vs previously set password
   Serial.println(correctPassword->size);
   for (int i = 0; i < correctPassword->size; i++) {
     Serial.print(correctPassword->times[i]);
