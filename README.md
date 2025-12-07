@@ -19,8 +19,8 @@ This software is designed to work with any standard arduino platform capable of 
 3) Motion Sensor
 
 Door Sensor:  
--Standard Magnetic Reed Switch. 
--Should produce a high voltage when the sensor is within range of a magnet. 
+-Standard Magnetic Reed Switch.  
+-Should produce a high voltage when the sensor is within range of a magnet.   
 -Contains two wires, one is connected to digital input pin, other is connected to GND. 
 
 Knock Sensor:
