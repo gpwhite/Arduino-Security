@@ -49,7 +49,7 @@ Used when the machine is in disarmed state. The first press will prompt the user
 ### **Arm/Disarm Button**
 Used to advance the system from disarmed state into armed state manually. Once the system is in warning mode, either through the use of the arm button or the detection of motion, the disarm button may be pressed in order to disarm the system. When the button is pressed, the user will be prompted to enter a password, if the password is correctly inputted, the system will enter disarmed state. If the password is incorrect, the alarm will sound. 
 
-# **User Guide
+# **User Guide**
 ***
 ### Creating a password
 - While in the DISARMED STATE (both LEDs turned off), press the update password button
